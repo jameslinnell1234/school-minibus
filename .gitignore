@@ -1,0 +1,8 @@
+node_modules
+.next
+.firebase
+.vercel
+.env.local
+.env
+dist
+build

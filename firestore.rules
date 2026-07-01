@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isUber() {
+      return signedIn() && userRole() == "uber";
+    }
+
+    function isSuperiorOrUber() {
+      return signedIn() && userRole() in ["superior", "uber"];
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "basic";
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.vanSize in ["Light", "Heavy"];
+
+      allow update, delete: if signedIn()
+        && (
+          resource.data.userId == request.auth.uid
+          || isSuperiorOrUber()
+        );
+    }
+  }
+}
